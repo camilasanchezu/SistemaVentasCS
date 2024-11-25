@@ -107,5 +107,53 @@ namespace SistemaVenta.BLL.Servicios
             return _mapper.Map<List<ReporteDTO>>(ListaResultado);
 
         }
+
+        public async Task<List<CompararVentasDTO>> CompararVentasEntreMeses(List<(DateTime fechaInicio, DateTime fechaFin)> meses)
+        {
+            try
+            {
+                // Resolve the queryable Venta data first
+                var ventasQuery = await _ventaRepositorio.Consultar();
+
+                List<CompararVentasDTO> resultadosComparacion = new List<CompararVentasDTO>();
+
+                // Iterate over each pair of month dates
+                foreach (var mes in meses)
+                {
+                    // Query sales totals for the current month based on FechaRegistro
+                    var totalMes = await ventasQuery
+                        .Where(v => v.FechaRegistro >= mes.fechaInicio && v.FechaRegistro <= mes.fechaFin)
+                        .SumAsync(v => v.Total ?? 0);
+
+                    // Add the result to the list
+                    resultadosComparacion.Add(new CompararVentasDTO
+                    {
+                        TotalMes = totalMes,
+                        Diferencia = 0, // No difference to compare yet
+                        EstadoComparacion = "N/A" // No comparison yet
+                    });
+                }
+
+                // Now, compare the totals for each consecutive month pair
+                for (int i = 0; i < resultadosComparacion.Count - 1; i++)
+                {
+                    var mesActual = resultadosComparacion[i];
+                    var mesSiguiente = resultadosComparacion[i + 1];
+
+                    decimal diferencia = mesSiguiente.TotalMes - mesActual.TotalMes;
+                    mesSiguiente.Diferencia = Math.Abs(diferencia); // Absolute value for difference
+                    mesSiguiente.EstadoComparacion = diferencia > 0 ? "Aumentaron" : "Disminuyeron";
+                }
+
+                return resultadosComparacion;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Error al comparar las ventas entre meses", ex);
+            }
+        }
+
+
+
     }
 }

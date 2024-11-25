@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using SistemaVenta.BLL.Servicios.Contrato;
 using SistemaVenta.DTO;
 using SistemaVenta.API.Utilidad;
+using System.Globalization;
 
 
 namespace SistemaVenta.API.Controllers
@@ -85,6 +86,26 @@ namespace SistemaVenta.API.Controllers
 
             }
             return Ok(rsp);
+        }
+
+        [HttpPost("CompararVentas")]
+        public async Task<IActionResult> CompararVentas([FromBody] List<(DateTime fechaInicio, DateTime fechaFin)> meses)
+        {
+            var rsp = new Response<List<CompararVentasDTO>>(); // Modificado para List<CompararVentasDTO>
+
+            try
+            {
+                // Llamamos al servicio para comparar ventas entre meses
+                rsp.status = true;
+                rsp.value = await _ventaServicio.CompararVentasEntreMeses(meses); // Llamada al servicio
+            }
+            catch (Exception ex)
+            {
+                rsp.status = false;
+                rsp.msg = ex.Message; // Capturamos y mostramos el mensaje de error
+            }
+
+            return Ok(rsp); // Retorna la respuesta con los resultados
         }
 
 
