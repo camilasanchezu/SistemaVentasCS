@@ -10,6 +10,6 @@ namespace SistemaVenta.DTO
     {
         public decimal TotalMes { get; set; }
         public decimal Diferencia { get; set; }
-        public string EstadoComparacion { get; set; }
+        public required string EstadoComparacion { get; set; }
     }
 }

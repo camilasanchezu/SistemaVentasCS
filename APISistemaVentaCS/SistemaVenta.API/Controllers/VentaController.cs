@@ -89,24 +89,54 @@ namespace SistemaVenta.API.Controllers
         }
 
         [HttpPost("CompararVentas")]
-        public async Task<IActionResult> CompararVentas([FromBody] List<(DateTime fechaInicio, DateTime fechaFin)> meses)
+        public async Task<IActionResult> CompararVentas([FromBody] List<MesesDTO> meses)
         {
-            var rsp = new Response<List<CompararVentasDTO>>(); // Modificado para List<CompararVentasDTO>
+            var rsp = new Response<List<CompararVentasDTO>>();
 
             try
             {
-                // Llamamos al servicio para comparar ventas entre meses
+                var resultados = new List<CompararVentasDTO>();
+
+                // Recorremos la lista de meses
+                foreach (var mes in meses)
+                {
+                    // Creamos las fechas de inicio y fin para el mes seleccionado
+                    var fechaInicioMesActual = new DateTime(DateTime.Now.Year, mes.Mes, 1); // Primer día del mes
+                    var fechaFinMesActual = new DateTime(DateTime.Now.Year, mes.Mes, DateTime.DaysInMonth(DateTime.Now.Year, mes.Mes)); // Último día del mes
+
+                    // Calculamos el mes anterior
+                    var mesAnterior = mes.Mes == 1 ? 12 : mes.Mes - 1; // Si es enero (mes 1), el mes anterior es diciembre (mes 12)
+                    var fechaInicioMesAnterior = new DateTime(DateTime.Now.Year, mesAnterior, 1);
+                    var fechaFinMesAnterior = new DateTime(DateTime.Now.Year, mesAnterior, DateTime.DaysInMonth(DateTime.Now.Year, mesAnterior));
+
+                    // Crea un objeto MesesDTO para el mes actual y el mes anterior
+                    var mesesDTO = new List<MesesDTO>
+            {
+                new MesesDTO { Mes = mes.Mes }, // Mes actual
+                new MesesDTO { Mes = mesAnterior } // Mes anterior
+            };
+
+                    // Llama al método CompararVentasEntreMeses pasando la lista de MesesDTO
+                    var ventas = await _ventaServicio.CompararVentasEntreMeses(mesesDTO);
+
+                    // Agregamos los resultados de la comparación de ventas
+                    resultados.AddRange(ventas);
+                }
+
                 rsp.status = true;
-                rsp.value = await _ventaServicio.CompararVentasEntreMeses(meses); // Llamada al servicio
+                rsp.value = resultados;
             }
             catch (Exception ex)
             {
                 rsp.status = false;
-                rsp.msg = ex.Message; // Capturamos y mostramos el mensaje de error
+                rsp.msg = ex.Message;
             }
 
             return Ok(rsp); // Retorna la respuesta con los resultados
         }
+
+
+
 
 
     }

@@ -14,6 +14,7 @@ namespace SistemaVenta.BLL.Servicios.Contrato
         Task<List<VentaDTO>> Historial(string buscarPor, string numeroVenta, string fechaInicio, string fechaFin);
 
         Task<List<ReporteDTO>> Reporte (string fechaInicio, string fechaFin);
-        Task<List<CompararVentasDTO>> CompararVentasEntreMeses(List<(DateTime fechaInicio, DateTime fechaFin)> meses); // Cambiado a List<CompararVentasDTO>
+        Task<List<CompararVentasDTO>> CompararVentasEntreMeses(List<MesesDTO> meses);
+
     }
 }

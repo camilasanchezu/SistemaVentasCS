@@ -108,41 +108,44 @@ namespace SistemaVenta.BLL.Servicios
 
         }
 
-        public async Task<List<CompararVentasDTO>> CompararVentasEntreMeses(List<(DateTime fechaInicio, DateTime fechaFin)> meses)
+        public async Task<List<CompararVentasDTO>> CompararVentasEntreMeses(List<MesesDTO> meses)
         {
             try
             {
-                // Resolve the queryable Venta data first
+                // Resolvemos la consulta de ventas
                 var ventasQuery = await _ventaRepositorio.Consultar();
 
                 List<CompararVentasDTO> resultadosComparacion = new List<CompararVentasDTO>();
 
-                // Iterate over each pair of month dates
+                // Iteramos sobre cada mes recibido
                 foreach (var mes in meses)
                 {
-                    // Query sales totals for the current month based on FechaRegistro
-                    var totalMes = await ventasQuery
-                        .Where(v => v.FechaRegistro >= mes.fechaInicio && v.FechaRegistro <= mes.fechaFin)
-                        .SumAsync(v => v.Total ?? 0);
+                    // Crear las fechas de inicio y fin para el mes actual
+                    var fechaInicioMesActual = new DateTime(DateTime.Now.Year, mes.Mes, 1); // Primer día del mes
+                    var fechaFinMesActual = new DateTime(DateTime.Now.Year, mes.Mes, DateTime.DaysInMonth(DateTime.Now.Year, mes.Mes)); // Último día del mes
 
-                    // Add the result to the list
+                    // Calculamos el mes anterior
+                    var mesAnterior = mes.Mes == 1 ? 12 : mes.Mes - 1; // Si es enero (mes 1), el mes anterior es diciembre (mes 12)
+                    var fechaInicioMesAnterior = new DateTime(DateTime.Now.Year, mesAnterior, 1);
+                    var fechaFinMesAnterior = new DateTime(DateTime.Now.Year, mesAnterior, DateTime.DaysInMonth(DateTime.Now.Year, mesAnterior));
+
+                    // Consultamos las ventas para el mes anterior
+                    var totalMesAnterior = await ventasQuery
+                        .Where(v => v.FechaRegistro >= fechaInicioMesAnterior && v.FechaRegistro <= fechaFinMesAnterior)
+                        .SumAsync(v => v.Total ?? 0); // Sumar el total de ventas del mes anterior
+
+                    // Consultamos las ventas para el mes actual
+                    var totalMesActual = await ventasQuery
+                        .Where(v => v.FechaRegistro >= fechaInicioMesActual && v.FechaRegistro <= fechaFinMesActual)
+                        .SumAsync(v => v.Total ?? 0); // Sumar el total de ventas del mes actual
+
+                    // Guardamos el resultado de los dos meses en la lista de comparación
                     resultadosComparacion.Add(new CompararVentasDTO
                     {
-                        TotalMes = totalMes,
-                        Diferencia = 0, // No difference to compare yet
-                        EstadoComparacion = "N/A" // No comparison yet
+                        TotalMes = totalMesActual,
+                        Diferencia = Math.Abs(totalMesActual - totalMesAnterior), // Diferencia absoluta entre los dos meses
+                        EstadoComparacion = totalMesActual > totalMesAnterior ? "Aumentaron" : "Disminuyeron" // Determinar el estado de la comparación
                     });
-                }
-
-                // Now, compare the totals for each consecutive month pair
-                for (int i = 0; i < resultadosComparacion.Count - 1; i++)
-                {
-                    var mesActual = resultadosComparacion[i];
-                    var mesSiguiente = resultadosComparacion[i + 1];
-
-                    decimal diferencia = mesSiguiente.TotalMes - mesActual.TotalMes;
-                    mesSiguiente.Diferencia = Math.Abs(diferencia); // Absolute value for difference
-                    mesSiguiente.EstadoComparacion = diferencia > 0 ? "Aumentaron" : "Disminuyeron";
                 }
 
                 return resultadosComparacion;
@@ -152,6 +155,7 @@ namespace SistemaVenta.BLL.Servicios
                 throw new Exception("Error al comparar las ventas entre meses", ex);
             }
         }
+
 
 
 
