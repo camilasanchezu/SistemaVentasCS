@@ -1,12 +1,10 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-
-
 using SistemaVenta.BLL.Servicios.Contrato;
 using SistemaVenta.DTO;
 using SistemaVenta.API.Utilidad;
 using System.Globalization;
-
+using SistemaVenta.BLL.Servicios;
 
 namespace SistemaVenta.API.Controllers
 {
@@ -15,21 +13,28 @@ namespace SistemaVenta.API.Controllers
     public class VentaController : ControllerBase
     {
         private readonly IVentaService _ventaServicio;
+        private readonly IUsuarioService _usuarioServicio; // Service to fetch user info and roles
 
-        public VentaController(IVentaService ventaServicio)
+        public VentaController(IVentaService ventaServicio, IUsuarioService userService)
         {
             _ventaServicio = ventaServicio;
+            _usuarioServicio = userService;
         }
 
-        [HttpPost]
-        [Route("Registrar")]
-
-        public async Task<IActionResult> Registrar([FromBody] VentaDTO venta)
+        [HttpPost("Registrar")]
+        public async Task<IActionResult> Registrar([FromHeader] int userId, [FromBody] VentaDTO venta)
         {
             var rsp = new Response<VentaDTO>();
 
             try
             {
+                // Validar que el usuario sea Id = 1
+                var tieneAcceso = await _usuarioServicio.ValidarAccesoPorUsuarioId(userId);
+                if (!tieneAcceso)
+                {
+                    return Forbid("No tienes permiso para realizar esta acción.");
+                }
+
                 rsp.status = true;
                 rsp.value = await _ventaServicio.Registrar(venta);
             }
@@ -37,89 +42,44 @@ namespace SistemaVenta.API.Controllers
             {
                 rsp.status = false;
                 rsp.msg = ex.Message;
-
             }
+
             return Ok(rsp);
         }
 
-        [HttpGet]
-        [Route("Historial")]
-
-        public async Task<IActionResult> Historial(string buscarPor, string? numeroVenta, string? fechaInicio, string? fechaFin)
-        {
-            var rsp = new Response<List<VentaDTO>>();
-            numeroVenta = numeroVenta is null ? "" : numeroVenta;
-            fechaInicio = fechaInicio is null ? "" : fechaInicio;
-            fechaFin = fechaFin is null ? "" : fechaFin;
-
-            try
-            {
-                rsp.status = true;
-                rsp.value = await _ventaServicio.Historial(buscarPor, numeroVenta, fechaInicio, fechaFin);
-            }
-            catch (Exception ex)
-            {
-                rsp.status = false;
-                rsp.msg = ex.Message;
-
-            }
-            return Ok(rsp);
-        }
-
-        [HttpGet]
-        [Route("Reporte")]
-
-        public async Task<IActionResult> Reporte(string? fechaInicio, string? fechaFin)
-        {
-            var rsp = new Response<List<ReporteDTO>>();
-            
-
-            try
-            {
-                rsp.status = true;
-                rsp.value = await _ventaServicio.Reporte( fechaInicio, fechaFin);
-            }
-            catch (Exception ex)
-            {
-                rsp.status = false;
-                rsp.msg = ex.Message;
-
-            }
-            return Ok(rsp);
-        }
 
         [HttpPost("CompararVentas")]
-        public async Task<IActionResult> CompararVentas([FromBody] List<MesesDTO> meses)
+        public async Task<IActionResult> CompararVentas([FromHeader] int userId, [FromBody] List<MesesDTO> meses)
         {
             var rsp = new Response<List<CompararVentasDTO>>();
 
             try
             {
+                // Validate role
+                var userRole = await _usuarioServicio.ObtenerRolUsuario(userId); // Use 'await' here
+                if (userRole != "Administrador")
+                {
+                    return Forbid("You are not authorized to perform this action.");
+                }
+
                 var resultados = new List<CompararVentasDTO>();
 
-                // Recorremos la lista de meses
                 foreach (var mes in meses)
                 {
-                    // Creamos las fechas de inicio y fin para el mes seleccionado
-                    var fechaInicioMesActual = new DateTime(DateTime.Now.Year, mes.Mes, 1); // Primer día del mes
-                    var fechaFinMesActual = new DateTime(DateTime.Now.Year, mes.Mes, DateTime.DaysInMonth(DateTime.Now.Year, mes.Mes)); // Último día del mes
+                    var fechaInicioMesActual = new DateTime(DateTime.Now.Year, mes.Mes, 1);
+                    var fechaFinMesActual = new DateTime(DateTime.Now.Year, mes.Mes, DateTime.DaysInMonth(DateTime.Now.Year, mes.Mes));
 
-                    // Calculamos el mes anterior
-                    var mesAnterior = mes.Mes == 1 ? 12 : mes.Mes - 1; // Si es enero (mes 1), el mes anterior es diciembre (mes 12)
+                    var mesAnterior = mes.Mes == 1 ? 12 : mes.Mes - 1;
                     var fechaInicioMesAnterior = new DateTime(DateTime.Now.Year, mesAnterior, 1);
                     var fechaFinMesAnterior = new DateTime(DateTime.Now.Year, mesAnterior, DateTime.DaysInMonth(DateTime.Now.Year, mesAnterior));
 
-                    // Crea un objeto MesesDTO para el mes actual y el mes anterior
                     var mesesDTO = new List<MesesDTO>
             {
-                new MesesDTO { Mes = mes.Mes }, // Mes actual
-                new MesesDTO { Mes = mesAnterior } // Mes anterior
+                new MesesDTO { Mes = mes.Mes },
+                new MesesDTO { Mes = mesAnterior }
             };
 
-                    // Llama al método CompararVentasEntreMeses pasando la lista de MesesDTO
                     var ventas = await _ventaServicio.CompararVentasEntreMeses(mesesDTO);
-
-                    // Agregamos los resultados de la comparación de ventas
                     resultados.AddRange(ventas);
                 }
 
@@ -132,12 +92,51 @@ namespace SistemaVenta.API.Controllers
                 rsp.msg = ex.Message;
             }
 
-            return Ok(rsp); // Retorna la respuesta con los resultados
+            return Ok(rsp);
         }
 
 
+        [HttpGet]
+        [Route("Historial")]
+        public async Task<IActionResult> Historial(string buscarPor, string? numeroVenta, string? fechaInicio, string? fechaFin)
+        {
+            var rsp = new Response<List<VentaDTO>>();
+            numeroVenta = numeroVenta ?? "";
+            fechaInicio = fechaInicio ?? "";
+            fechaFin = fechaFin ?? "";
 
+            try
+            {
+                rsp.status = true;
+                rsp.value = await _ventaServicio.Historial(buscarPor, numeroVenta, fechaInicio, fechaFin);
+            }
+            catch (Exception ex)
+            {
+                rsp.status = false;
+                rsp.msg = ex.Message;
+            }
 
+            return Ok(rsp);
+        }
 
+        [HttpGet]
+        [Route("Reporte")]
+        public async Task<IActionResult> Reporte(string? fechaInicio, string? fechaFin)
+        {
+            var rsp = new Response<List<ReporteDTO>>();
+
+            try
+            {
+                rsp.status = true;
+                rsp.value = await _ventaServicio.Reporte(fechaInicio, fechaFin);
+            }
+            catch (Exception ex)
+            {
+                rsp.status = false;
+                rsp.msg = ex.Message;
+            }
+
+            return Ok(rsp);
+        }
     }
 }
