@@ -13,8 +13,12 @@ namespace SistemaVenta.BLL.Servicios.Contrato
         Task<VentaDTO> Registrar(VentaDTO modelo);
         Task<List<VentaDTO>> Historial(string buscarPor, string numeroVenta, string fechaInicio, string fechaFin);
 
-        Task<List<ReporteDTO>> Reporte (string fechaInicio, string fechaFin);
+        Task<List<ReporteDTO>> Reporte(string fechaInicio, string fechaFin);
         Task<List<CompararVentasDTO>> CompararVentasEntreMeses(List<MesesDTO> meses);
+
+        Task<ComparacionVentasDTO> CompararHistorialYReporte(string fechaInicio, string fechaFin);
+
+
 
     }
 }

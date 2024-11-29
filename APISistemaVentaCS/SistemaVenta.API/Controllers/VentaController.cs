@@ -138,5 +138,26 @@ namespace SistemaVenta.API.Controllers
 
             return Ok(rsp);
         }
+
+        [HttpGet]
+        [Route("CompararHistorialYReporte")]
+        public async Task<IActionResult> CompararHistorialYReporte(string fechaInicio, string fechaFin)
+        {
+            var rsp = new Response<ComparacionVentasDTO>();
+
+            try
+            {
+                rsp.status = true;
+                rsp.value = await _ventaServicio.CompararHistorialYReporte(fechaInicio, fechaFin);
+            }
+            catch (Exception ex)
+            {
+                rsp.status = false;
+                rsp.msg = ex.Message;
+            }
+
+            return Ok(rsp);
+        }
+
     }
 }

@@ -156,6 +156,89 @@ namespace SistemaVenta.BLL.Servicios
             }
         }
 
+        public async Task<ComparacionVentasDTO> CompararHistorialYReporte(string fechaInicio, string fechaFin)
+        {
+            try
+            {
+                // Convertir las fechas
+                DateTime fech_Inicio = DateTime.ParseExact(fechaInicio, "dd/MM/yyyy", new CultureInfo("es-EC"));
+                DateTime fech_Fin = DateTime.ParseExact(fechaFin, "dd/MM/yyyy", new CultureInfo("es-EC"));
+
+                // Obtener ventas del historial y del reporte
+                var ventasHistorial = await _ventaRepositorio.Consultar();
+                var ventasReporte = await _detalleVentaRepositorio.Consultar();
+
+                // Filtrar las ventas por rango de fechas
+                var historialFiltrado = await ventasHistorial
+                    .Where(v => v.FechaRegistro >= fech_Inicio && v.FechaRegistro <= fech_Fin)
+                    .Include(v => v.DetalleVenta)
+                    .ThenInclude(dv => dv.IdProductoNavigation)
+                    .ToListAsync();
+
+                var reporteFiltrado = await ventasReporte
+                    .Where(dv => dv.IdVentaNavigation.FechaRegistro >= fech_Inicio && dv.IdVentaNavigation.FechaRegistro <= fech_Fin)
+                    .Include(dv => dv.IdProductoNavigation)
+                    .ToListAsync();
+
+                // Agrupar productos del historial y del reporte
+                var historialAgrupado = historialFiltrado
+                    .SelectMany(v => v.DetalleVenta)
+                    .GroupBy(dv => dv.IdProducto)
+                    .Select(g => new
+                    {
+                        IdProducto = g.Key,
+                        NombreProducto = g.First().IdProductoNavigation.Nombre,
+                        Cantidad = g.Sum(dv => dv.Cantidad ?? 0)
+                    }).ToList();
+
+                var reporteAgrupado = reporteFiltrado
+                    .GroupBy(dv => dv.IdProducto)
+                    .Select(g => new
+                    {
+                        IdProducto = g.Key,
+                        NombreProducto = g.First().IdProductoNavigation.Nombre,
+                        Cantidad = g.Sum(dv => dv.Cantidad ?? 0)
+                    }).ToList();
+
+                // Crear lista para las comparaciones
+                var comparaciones = new List<ComparacionVentasDTO>();
+
+                // Iterar sobre el historial agrupado con un foreach
+                foreach (var productoHistorial in historialAgrupado)
+                {
+                    // Buscar el producto en el reporte
+                    var productoReporte = reporteAgrupado.FirstOrDefault(r => r.IdProducto == productoHistorial.IdProducto);
+
+                    // Calcular los valores necesarios
+                    int cantidadReporte = productoReporte?.Cantidad ?? 0;
+                    int cantidadTotal = productoHistorial.Cantidad + cantidadReporte;
+                    int diferencia = Math.Abs(productoHistorial.Cantidad - cantidadReporte);
+
+                    // Agregar la comparación a la lista
+                    comparaciones.Add(new ComparacionVentasDTO
+                    {
+                        IdProducto = productoHistorial.IdProducto ?? 0, // Si es nulo, asigna 0
+                        NombreProducto = productoHistorial.NombreProducto ?? "Producto desconocido",
+                        CantidadVendida = cantidadTotal,
+                        PorcentajeVenta = Math.Round((double)cantidadTotal / (historialAgrupado.Sum(h => h.Cantidad) + reporteAgrupado.Sum(r => r.Cantidad)) * 100, 2),
+                        TipoPago = historialFiltrado.FirstOrDefault(v => v.DetalleVenta.Any(dv => dv.IdProducto == productoHistorial.IdProducto))?.TipoPago ?? "Sin información",
+                        NumeroDocumento = historialFiltrado.FirstOrDefault(v => v.DetalleVenta.Any(dv => dv.IdProducto == productoHistorial.IdProducto))?.NumeroDocumento ?? "No especificado"
+                    });
+
+                }
+
+                // Determinar el producto más vendido
+                var productoMasVendido = comparaciones.OrderByDescending(c => c.CantidadVendida).FirstOrDefault();
+
+                return productoMasVendido ?? throw new Exception("No se encontraron datos para comparar en el rango proporcionado.");
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Error al comparar historial y reporte", ex);
+            }
+        }
+
+
 
 
 

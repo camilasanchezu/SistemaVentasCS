@@ -138,7 +138,7 @@ namespace SistemaVenta.BLL.Servicios
                 if (usuario == null || usuario.IdRolNavigation == null)
                     throw new Exception("El usuario o el rol no existe.");
 
-                return usuario.IdRolNavigation.Nombre; // Assuming `Nombre` is the role name
+                return usuario.IdRolNavigation.Nombre; // Assuming "Nombre" is the role name
             }
             catch
             {
