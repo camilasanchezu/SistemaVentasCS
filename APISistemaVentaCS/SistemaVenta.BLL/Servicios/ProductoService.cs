@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -16,11 +17,22 @@ namespace SistemaVenta.BLL.Servicios
     public class ProductoService :IProductoService
     {
         private readonly IGenericRepository<Producto> _productoRepositorio;
+        private readonly IGenericRepository<Venta> _ventaRepositorio;
+        private readonly IGenericRepository<DetalleVenta> _detalleVentaRepositorio;
+        private readonly IGenericRepository<Categoria> _categoriaRepositorio;
         private readonly IMapper _mapper;
 
-        public ProductoService(IGenericRepository<Producto> productoRepositorio, IMapper mapper)
+        public ProductoService(
+       IGenericRepository<Producto> productoRepositorio,
+       IGenericRepository<Venta> ventaRepositorio,
+       IGenericRepository<DetalleVenta> detalleVentaRepositorio,
+       IGenericRepository<Categoria> categoriaRepositorio,
+       IMapper mapper)
         {
             _productoRepositorio = productoRepositorio;
+            _ventaRepositorio = ventaRepositorio;
+            _detalleVentaRepositorio = detalleVentaRepositorio;
+            _categoriaRepositorio = categoriaRepositorio;
             _mapper = mapper;
         }
 
@@ -118,6 +130,9 @@ namespace SistemaVenta.BLL.Servicios
             }
         }
 
+
        
+
+
     }
 }

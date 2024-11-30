@@ -90,5 +90,29 @@ namespace SistemaVenta.API.Controllers
             return Ok(rsp);
         }
 
+        [HttpGet]
+        [Route("VentasPorCategoria")]
+        public async Task<IActionResult> VentasPorCategoria(string fechaInicio, string fechaFin)
+        {
+            var rsp = new Response<List<CategoriaVentasDTO>>();
+
+            try
+            {
+                // Llama al servicio para obtener las ventas agrupadas por categoría
+                rsp.status = true;
+                rsp.value = await _ventaServicio.ObtenerVentasPorCategoria(fechaInicio, fechaFin);
+            }
+            catch (Exception ex)
+            {
+                rsp.status = false;
+                rsp.msg = ex.Message;
+            }
+
+            return Ok(rsp);
+        }
+
+
+
+
     }
 }

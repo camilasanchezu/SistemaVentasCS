@@ -238,6 +238,44 @@ namespace SistemaVenta.BLL.Servicios
             }
         }
 
+        public async Task<List<CategoriaVentasDTO>> ObtenerVentasPorCategoria(string fechaInicio, string fechaFin)
+        {
+            try
+            {
+                // Convertir las fechas al formato adecuado
+                DateTime fech_Inicio = DateTime.ParseExact(fechaInicio, "dd/MM/yyyy", new CultureInfo("es-EC"));
+                DateTime fech_Fin = DateTime.ParseExact(fechaFin, "dd/MM/yyyy", new CultureInfo("es-EC"));
+
+                // Consultar las ventas en el rango de fechas
+                var ventasQuery = await _detalleVentaRepositorio.Consultar();
+
+                // Filtrar las ventas por rango de fechas y agruparlas por categoría
+                var ventasAgrupadasPorCategoria = await ventasQuery
+                    .Include(dv => dv.IdProductoNavigation)
+                    .ThenInclude(p => p.IdCategoriaNavigation)
+                    .Where(dv => dv.IdVentaNavigation.FechaRegistro >= fech_Inicio && dv.IdVentaNavigation.FechaRegistro <= fech_Fin)
+                    .GroupBy(dv => new
+                    {
+                        dv.IdProductoNavigation.IdCategoria,
+                        NombreCategoria = dv.IdProductoNavigation.IdCategoriaNavigation.Nombre
+                    })
+                    .Select(g => new CategoriaVentasDTO
+                    {
+                        IdCategoria = g.Key.IdCategoria ?? 0, // Si la categoría es nula, usar 0
+                        NombreCategoria = g.Key.NombreCategoria ?? "Categoría desconocida",
+                        TotalVentas = g.Sum(dv => dv.Cantidad * dv.Precio ?? 0) // Calcular el total de ventas
+                    })
+                    .ToListAsync();
+
+                return ventasAgrupadasPorCategoria;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("Error al obtener las ventas por categoría", ex);
+            }
+        }
+
+
 
 
 

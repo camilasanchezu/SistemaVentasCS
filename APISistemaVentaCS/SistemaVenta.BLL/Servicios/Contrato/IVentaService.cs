@@ -18,6 +18,8 @@ namespace SistemaVenta.BLL.Servicios.Contrato
 
         Task<ComparacionVentasDTO> CompararHistorialYReporte(string fechaInicio, string fechaFin);
 
+        Task<List<CategoriaVentasDTO>> ObtenerVentasPorCategoria(string fechaInicio, string fechaFin);
+
 
 
     }
