@@ -91,30 +91,36 @@ namespace SistemaVenta.Utility
             #endregion Venta
 
             #region DetalleVenta
+
+            // Mapeo de DetalleVenta a DetalleVentaDTO
             CreateMap<DetalleVenta, DetalleVentaDTO>()
-                 .ForMember(destino => destino.DescripcionProducto,
-                opt => opt.MapFrom(origen => origen.IdProductoNavigation.Nombre))
-                 .ForMember(destino =>
-            destino.PrecioTexto, opt =>
-            opt.MapFrom(origen => Convert.ToString
-            (origen.Precio.Value, new CultureInfo("es-EC"))))
-                 .ForMember(destino =>
-            destino.TotalTexto, opt =>
-            opt.MapFrom(origen => Convert.ToString
-            (origen.Total.Value, new CultureInfo("es-EC"))));
+                .ForMember(destino => destino.DescripcionProducto,
+                    opt => opt.MapFrom(origen => origen.IdProductoNavigation != null ? origen.IdProductoNavigation.Nombre : null))
+                .ForMember(destino => destino.PrecioTexto, opt =>
+                    opt.MapFrom(origen => origen.Precio.HasValue
+                        ? origen.Precio.Value.ToString("N2", new CultureInfo("es-EC"))
+                        : null))
+                .ForMember(destino => destino.TotalTexto, opt =>
+                    opt.MapFrom(origen => origen.Total.HasValue
+                        ? origen.Total.Value.ToString("N2", new CultureInfo("es-EC"))
+                        : null))
+                .ForMember(destino => destino.IdUsuario, opt =>
+                    opt.MapFrom(origen => origen.IdUsuario));
 
-            // al reves
-
+            // Mapeo de DetalleVentaDTO a DetalleVenta
             CreateMap<DetalleVentaDTO, DetalleVenta>()
-                .ForMember(destino =>
-            destino.Precio, opt =>
-            opt.MapFrom(origen => Convert.ToDecimal
-            (origen.PrecioTexto, new CultureInfo("es-EC")))
-            )
-                .ForMember(destino =>
-            destino.Total, opt =>
-            opt.MapFrom(origen => Convert.ToDecimal
-            (origen.TotalTexto, new CultureInfo("es-EC"))));
+                .ForMember(destino => destino.Precio, opt =>
+                    opt.MapFrom(origen => !string.IsNullOrEmpty(origen.PrecioTexto)
+                        ? Convert.ToDecimal(origen.PrecioTexto, new CultureInfo("es-EC"))
+                        : (decimal?)null))
+                .ForMember(destino => destino.Total, opt =>
+                    opt.MapFrom(origen => !string.IsNullOrEmpty(origen.TotalTexto)
+                        ? Convert.ToDecimal(origen.TotalTexto, new CultureInfo("es-EC"))
+                        : (decimal?)null))
+                .ForMember(destino => destino.IdUsuario, opt =>
+                    opt.MapFrom(origen => origen.IdUsuario))
+                // Asegúrate de manejar otros mapeos necesarios, por ejemplo, IdProductoNavigation si es necesario
+                ;
 
             #endregion DetalleVenta
 

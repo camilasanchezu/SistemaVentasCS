@@ -56,9 +56,11 @@ public partial class DbventaContext : DbContext
                 .HasColumnName("nombre");
         });
 
+        
         modelBuilder.Entity<DetalleVenta>(entity =>
         {
-            entity.HasKey(e => e.IdDetalleVenta).HasName("PK__DetalleV__BFE2843FC1BBF9E8");
+            entity.HasKey(e => e.IdDetalleVenta)
+                .HasName("PK__DetalleV__BFE2843FC1BBF9E8");
 
             entity.Property(e => e.IdDetalleVenta).HasColumnName("idDetalleVenta");
             entity.Property(e => e.Cantidad).HasColumnName("cantidad");
@@ -71,14 +73,33 @@ public partial class DbventaContext : DbContext
                 .HasColumnType("decimal(10, 2)")
                 .HasColumnName("total");
 
-            entity.HasOne(d => d.IdProductoNavigation).WithMany(p => p.DetalleVenta)
+            // Configuración para IdUsuario
+            entity.Property(e => e.IdUsuario)
+                .HasColumnName("idUsuario")
+                .IsRequired(); // Define si es obligatorio o no
+
+            // Relaciones existentes
+            entity.HasOne(d => d.IdProductoNavigation)
+                .WithMany(p => p.DetalleVenta)
                 .HasForeignKey(d => d.IdProducto)
                 .HasConstraintName("FK__DetalleVe__idPro__66603565");
 
-            entity.HasOne(d => d.IdVentaNavigation).WithMany(p => p.DetalleVenta)
+            entity.HasOne(d => d.IdVentaNavigation)
+                .WithMany(p => p.DetalleVenta)
                 .HasForeignKey(d => d.IdVenta)
                 .HasConstraintName("FK__DetalleVe__idVen__656C112C");
+
+            // Nueva relación uno a uno con Usuario
+            entity.HasOne(d => d.IdUsuarioNavigation)
+                .WithOne(u => u.DetalleVenta)
+                .HasForeignKey<DetalleVenta>(d => d.IdUsuario)
+                .HasConstraintName("FK__DetalleVe__idUsu__7A672E12");
+
+            // Asegurar que IdUsuario sea único en DetalleVenta para mantener la relación uno a uno
+            entity.HasIndex(d => d.IdUsuario)
+                .IsUnique();
         });
+
 
         modelBuilder.Entity<Menu>(entity =>
         {
