@@ -26,6 +26,16 @@ Este proyecto es un **Sistema de Ventas** que permite la gestión de productos, 
 - Vercel
 - Azure
 
+## Mejores Práctivas
+# Principios Sólidos
+- Principios de Responsabilidad Única
+- Principios de Inversión de Dependencias
+
+# Patrones de Diseño
+- Adapter
+- Facade
+
+
 ## Instalación
 
 1. Clonar el repositorio:
